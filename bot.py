@@ -102,8 +102,7 @@ def home():
     return "Bot is running 24/7!"
 
 def run_web():
-    port = int(os.environ.get("PORT", 8080))
-    web_app.run(host='0.0.0.0', port=port)
+    app.run(host="0.0.0.0", port=port, use_reloader=False)
 
 # ... (ฟังก์ชัน scrape_with_selenium และ handle_message เหมือนเดิม) ...
 
