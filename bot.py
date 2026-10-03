@@ -3,24 +3,9 @@ import time
 import asyncio
 from threading import Thread
 from flask import Flask
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-# 1. ตั้งค่า Flask Server สำหรับ Render Health Check
-web_app = Flask(__name__)
-
-@web_app.route('/')
-def home():
-    return "Bot is running 24/7!"
-
-def run_web():
-    port = int(os.environ.get("PORT", 8080))
-    web_app.run(host="0.0.0.0", port=port, use_reloader=False)
-
-# 2. ฟังก์ชัน Selenium ดึงข้อมูล
 def scrape_with_selenium(bank_code, account_no):
     options = Options()
     options.add_argument("--headless=new")
@@ -28,27 +13,45 @@ def scrape_with_selenium(bank_code, account_no):
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     
+    # 1. กำหนดขนาดหน้าจอมาตรฐาน และหลบเลี่ยงการตรวจจับบอท
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+    
     driver = webdriver.Chrome(options=options)
     
     try:
-        # เปิดหน้าเว็บเป้าหมาย
+        print(f"[Scraper] กำลังเปิดเว็บค้นหา: {bank_code} - {account_no}")
         driver.get("https://acc-name-check.vercel.app/")
-        time.sleep(3)
         
-        # กำหนดค่ารหัสธนาคารลงใน hidden input
-        driver.execute_script(f"document.getElementById('bank').value = '{bank_code}';")
+        wait = WebDriverWait(driver, 10)
         
-        # กรอกเลขบัญชีและกดค้นหา
-        account_input = driver.find_element(By.ID, "account")
+        # 2. รอช่องกรอกเลขบัญชีปรากฏขึ้นมา
+        account_input = wait.until(EC.presence_of_element_located((By.ID, "account")))
+        
+        # 3. กำหนดค่ารหัสธนาคาร พร้อมยิง Event ให้ JS ฝั่งปลายทางรับรู้
+        driver.execute_script("""
+            var bankInput = document.getElementById('bank');
+            if (bankInput) {
+                bankInput.value = arguments[0];
+                bankInput.dispatchEvent(new Event('input', { bubbles: true }));
+                bankInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        """, bank_code)
+        
+        # 4. กรอกเลขบัญชี
         account_input.clear()
         account_input.send_keys(account_no)
+        
+        # 5. กดส่งฟอร์ม
         account_input.submit()
         
-        # รอผลลัพธ์
-        time.sleep(4)
+        # 6. รอผลลัพธ์ดึงข้อมูลจากระบบปลายทาง
+        time.sleep(5)
         
         result_section = driver.find_element(By.ID, "results")
         result_text = result_section.text.strip()
+        
+        print(f"[Scraper] ผลลัพธ์ที่ได้: {result_text}")
         
         if not result_text:
             return None
@@ -56,6 +59,7 @@ def scrape_with_selenium(bank_code, account_no):
         return result_text
         
     except Exception as e:
+        print(f"[Scraper Error] {str(e)}")
         return f"เกิดข้อผิดพลาด: {str(e)}"
         
     finally:
