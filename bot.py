@@ -30,7 +30,52 @@ def run_web():
 
 
 # ==============================================================================
-# 2. SELENIUM SCRAPER
+# 2. BANK CODE CONVERTER
+# ==============================================================================
+def convert_bank_code(input_str: str) -> str:
+    """แปลงคำค้นหาภาษาไทยหรือชื่อย่อ ให้เป็นรหัสธนาคารที่เว็บปลายทางรองรับ"""
+    if not input_str:
+        return ""
+    name = input_str.strip().lower()
+
+    if "กสิกรไทย" in name or name == "kbank":
+        return "kbank"
+    if "ไทยพาณิชย์" in name or name == "scb":
+        return "scb"
+    if "กรุงเทพ" in name or name == "bbl":
+        return "bbl"
+    if "กรุงไทย" in name or name == "ktb":
+        return "ktb"
+    if "กรุงศรี" in name or name == "bay":
+        return "bay"
+    if "ทหารไทย" in name or "ทีทีบี" in name or name == "ttb":
+        return "ttb"
+    if "ออมสิน" in name or name == "gsb":
+        return "gsb"
+    if "ธกส" in name or name == "baac":
+        return "baac"
+    if "เกียรตินาคินภัทร" in name or name == "kkp":
+        return "kkp"
+    if "ซีไอเอ็มบี" in name or name == "cimb":
+        return "cimb"
+    if "ยูโอบี" in name or name == "uob":
+        return "uob"
+    if "แลนด์แอนด์เฮ้าส์" in name or name == "lhbank":
+        return "lhbank"
+    if "ธอส" in name or name == "ghb":
+        return "ghb"
+    if "อิสลาม" in name or name == "isbt":
+        return "isbt"
+    if "ไทยเครดิต" in name or name == "tcrb":
+        return "tcrb"
+    if "ไอซีบีซี" in name or name == "icbc":
+        return "icbc"
+
+    return name  # คืนค่าเดิมกรณีพิมพ์เป็นรหัสตรงอยู่แล้ว
+
+
+# ==============================================================================
+# 3. SELENIUM SCRAPER
 # ==============================================================================
 def scrape_with_selenium(bank_code: str, account_no: str) -> str:
     options = Options()
@@ -72,7 +117,7 @@ def scrape_with_selenium(bank_code: str, account_no: str) -> str:
         account_input.clear()
         account_input.send_keys(account_no)
         
-        # กด ENTER เพื่อส่งฟอร์ม (เสถียรกว่า .submit() บนเว็บ React/Next.js)
+        # กด ENTER เพื่อส่งฟอร์ม
         account_input.send_keys(Keys.ENTER)
 
         # รอระบบดึงผลลัพธ์
@@ -97,7 +142,7 @@ def scrape_with_selenium(bank_code: str, account_no: str) -> str:
 
 
 # ==============================================================================
-# 3. TELEGRAM BOT HANDLER
+# 4. TELEGRAM BOT HANDLER
 # ==============================================================================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
@@ -107,31 +152,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = msg.text.strip()
     parts = text.split()
 
-    # รับเฉพาะข้อความรูปแบบ [BANK_CODE] [ACCOUNT_NO]
-    if (!input) return "";
-  const name = input.trim().toLowerCase();
-  
-  if (name.includes("กสิกร") || name === "kbank") return "kbank";
-  if (name.includes("ไทยพาณิชย์") || name === "scb") return "scb";
-  if (name.includes("กรุงเทพ") || name === "bbl") return "bbl";
-  if (name.includes("กรุงไทย") || name === "ktb") return "ktb";
-  if (name.includes("กรุงศรี") || name === "bay") return "bay";
-  if (name.includes("ทหารไทย") || name.includes("ทีทีบี") || name === "ttb") return "ttb";
-  if (name.includes("ออมสิน") || name === "gsb") return "gsb";
-  if (name.includes("ธกส") || name === "baac") return "baac";
-  if (name.includes("เกียรตินาคิน") || name === "kkp") return "kkp";
+    # รับเฉพาะข้อความรูปแบบ [BANK] [ACCOUNT_NO]
+    if len(parts) != 2:
+        return
 
-  return name;
+    raw_bank_input = parts[0]
+    account_no = parts[1]
 
-    # ข้อความสถานะการทำงาน (ใช้ HTML Mode เพื่อความปลอดภัย)
+    # แปลงรหัสธนาคารผ่านฟังก์ชันที่กำหนด
+    bank_code = convert_bank_code(raw_bank_input)
+    display_bank = bank_code.upper()
+
+    # ข้อความสถานะการทำงาน
     loading_msg = await msg.reply_text(
         f"⏳ <b>กำลังตรวจสอบข้อมูล...</b>\n"
-        f"🏦 ธนาคาร: <code>{bank_code}</code>\n"
+        f"🏦 ธนาคาร: <code>{display_bank}</code>\n"
         f"🔢 เลขบัญชี: <code>{account_no}</code>",
         parse_mode="HTML"
     )
 
-    # รัน Selenium บน Thread แยก ป้องกัน Event Loop ค้าง
+    # รัน Selenium บน Thread แยก
     raw_result = await asyncio.to_thread(scrape_with_selenium, bank_code, account_no)
 
     try:
@@ -143,20 +183,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         error_msg = (
             f"❌ <b>ตรวจสอบไม่สำเร็จ</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
-            f"🏦 <b>ธนาคาร:</b> <code>{bank_code}</code>\n"
+            f"🏦 <b>ธนาคาร:</b> <code>{display_bank}</code>\n"
             f"🔢 <b>เลขบัญชี:</b> <code>{account_no}</code>\n"
             f"⚠️ <b>สถานะ:</b> ไม่พบข้อมูล หรือระบบขัดข้อง"
         )
         await msg.reply_text(error_msg, parse_mode="HTML")
         return
 
-    # ป้องกันการแสดงผลตัวอักษร < > ที่อาจหลุดมาทำให้อ่าน HTML ผิดพลาด
     clean_result = raw_result.replace("<", "&lt;").replace(">", "&gt;")
 
     formatted_msg = (
         f"✅ <b>ผลการตรวจสอบบัญชี</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"🏦 <b>ธนาคาร:</b> <code>{bank_code}</code>\n"
+        f"🏦 <b>ธนาคาร:</b> <code>{display_bank}</code>\n"
         f"🔢 <b>เลขบัญชี:</b> <code>{account_no}</code>\n"
         f"👤 <b>รายละเอียด:</b> {clean_result}\n"
         f"━━━━━━━━━━━━━━━━━━━━"
@@ -166,10 +205,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==============================================================================
-# 4. MAIN EXECUTION
+# 5. MAIN EXECUTION
 # ==============================================================================
 if __name__ == '__main__':
-    # รัน Flask บน background thread
     t = Thread(target=run_web, daemon=True)
     t.start()
 
