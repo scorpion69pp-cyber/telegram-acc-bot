@@ -1,0 +1,4 @@
+python-telegram-bot
+selenium
+requests
+Flask
