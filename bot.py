@@ -108,11 +108,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts = text.split()
 
     # รับเฉพาะข้อความรูปแบบ [BANK_CODE] [ACCOUNT_NO]
-    if len(parts) != 2:
-        return
+    if (!input) return "";
+  const name = input.trim().toLowerCase();
+  
+  if (name.includes("กสิกร") || name === "kbank") return "kbank";
+  if (name.includes("ไทยพาณิชย์") || name === "scb") return "scb";
+  if (name.includes("กรุงเทพ") || name === "bbl") return "bbl";
+  if (name.includes("กรุงไทย") || name === "ktb") return "ktb";
+  if (name.includes("กรุงศรี") || name === "bay") return "bay";
+  if (name.includes("ทหารไทย") || name.includes("ทีทีบี") || name === "ttb") return "ttb";
+  if (name.includes("ออมสิน") || name === "gsb") return "gsb";
+  if (name.includes("ธกส") || name === "baac") return "baac";
+  if (name.includes("เกียรตินาคิน") || name === "kkp") return "kkp";
 
-    bank_code = parts[0].upper()
-    account_no = parts[1]
+  return name;
 
     # ข้อความสถานะการทำงาน (ใช้ HTML Mode เพื่อความปลอดภัย)
     loading_msg = await msg.reply_text(
