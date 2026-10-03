@@ -3,8 +3,17 @@ import time
 import asyncio
 from threading import Thread
 from flask import Flask
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+# Import สำหรับ Telegram
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+
+# ... (โค้ดส่วนอื่น ๆ ด้านล่าง) ...
 
 def scrape_with_selenium(bank_code, account_no):
     options = Options()
