@@ -112,7 +112,7 @@ if __name__ == '__main__':
     t = Thread(target=run_web, daemon=True)
     t.start()
     
-    TOKEN = os.environ.get("TELEGRAM_TOKEN", "8802624972:AAE9cIT04blM68yLn3u7FgWuerkzKOvMUOA")
+    TOKEN = os.environ.get("TELEGRAM_TOKEN", "8802624972:AAFwlRM5tyR_4LLTHEny4ZVleIvV1_ERtkw")
     
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
